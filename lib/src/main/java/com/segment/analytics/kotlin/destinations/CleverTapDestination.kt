@@ -6,7 +6,6 @@ import android.content.Context
 import android.os.Bundle
 import com.clevertap.android.sdk.BuildConfig
 import com.clevertap.android.sdk.CleverTapAPI
-import com.clevertap.android.sdk.isNotNullAndBlank
 import com.segment.analytics.kotlin.android.plugins.AndroidLifecycle
 import com.segment.analytics.kotlin.core.AliasEvent
 import com.segment.analytics.kotlin.core.BaseEvent
@@ -20,7 +19,11 @@ import com.segment.analytics.kotlin.core.platform.plugins.logger.LogKind
 import com.segment.analytics.kotlin.core.platform.plugins.logger.log
 import com.segment.analytics.kotlin.core.utilities.toContent
 import com.segment.analytics.kotlin.destinations.CleverTapDestination.CleverTapConstants.CHARGED_KEYS
+import com.segment.analytics.kotlin.destinations.CleverTapDestination.CleverTapConstants.ERROR_CODE
+import com.segment.analytics.kotlin.destinations.CleverTapDestination.CleverTapConstants.FEMALE_TOKENS
+import com.segment.analytics.kotlin.destinations.CleverTapDestination.CleverTapConstants.MALE_TOKENS
 import com.segment.analytics.kotlin.destinations.CleverTapDestination.CleverTapConstants.ORDER_COMPLETED_KEY
+import com.segment.analytics.kotlin.destinations.CleverTapDestination.CleverTapConstants.LIBRARY_NAME
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
@@ -75,8 +78,8 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
 
         CleverTapAPI.changeCredentials(accountID, accountToken, region)
         cl = CleverTapAPI.getDefaultInstance(context)?.apply {
-            setLibrary("Segment-Kotlin")
-            setCustomSdkVersion("Segment-Kotlin", BuildConfig.VERSION_CODE)
+            setLibrary(LIBRARY_NAME)
+            setCustomSdkVersion(LIBRARY_NAME, BuildConfig.VERSION_CODE)
         }
 
         analytics.log("Configured CleverTap+Segment integration and initialized CleverTap.")
@@ -137,8 +140,8 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
     override fun screen(payload: ScreenEvent): BaseEvent? {
         try {
             cl?.recordScreen(payload.name)
-        } catch (npe: NullPointerException) {
-            analytics.log("ScreenPayLoad obj is null. $npe", LogKind.ERROR)
+        } catch (t: Throwable) {
+            analytics.log("Screen event failed $t", LogKind.ERROR)
         }
         return payload
     }
@@ -147,8 +150,12 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
         super.track(payload)
         val event: String = payload.event
 
-        val properties = payload.properties.toPrimitive()
+        if (event.isBlank()) {
+            analytics.log("CleverTap: Event Name is blank, returning")
+            return payload
+        }
 
+        val properties = payload.properties.toPrimitive()
         if (event.equals(ORDER_COMPLETED_KEY, ignoreCase = true)) {
             handleOrderCompleted(properties)
             return payload
@@ -158,7 +165,7 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
             cl?.pushEvent(event, properties)
         } catch (t: Throwable) {
             analytics.log("CleverTap: Error pushing event $t", LogKind.ERROR)
-            cl?.pushError(t.message, 512)
+            cl?.pushError(t.message, ERROR_CODE)
         }
         return payload
     }
@@ -172,7 +179,6 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
 //        if (orderId != null) {
 //            details.put("Charged ID", orderId)
 //        }
-
         for (key in properties.keys) {
             //todo check for the need of this
             if (CHARGED_KEYS.contains(key.lowercase())) continue
@@ -180,8 +186,8 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
                 properties[key]?.let { value ->
                     details[key] = value
                 }
-            } catch (_: Throwable) {
-                // optionally log t
+            } catch (t : Throwable) {
+                analytics.log("CleverTap: Error adding $key to properties due to $t", LogKind.ERROR)
             }
         }
 
@@ -191,7 +197,7 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
             cl?.pushChargedEvent(details, items)
         } catch (t: Throwable) {
             analytics.log("CleverTap: Error handling Order Completed")
-            cl?.pushError("Error handling Order Completed: " + t.message, 512)
+            cl?.pushError("Error handling Order Completed: " + t.message, ERROR_CODE)
         }
     }
 
@@ -209,11 +215,9 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
 
 
     override fun identify(payload: IdentifyEvent): BaseEvent? {
-
         super.identify(payload)
 
         val traits = payload.traits.toPrimitive()
-
         try {
             val profile = transform<Any?>(
                 traits,
@@ -221,35 +225,39 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
             )
 
             val userId = payload.userId
-            if (userId.isNotNullAndBlank()) {
+            if (userId.isNotBlank()) {
                 profile["Identity"] = userId
             }
 
-            val gender = traits["Gender"]?.toString()
-            if (gender.isNotNullAndBlank()) {
-                if (CleverTapConstants.MALE_TOKENS.contains(gender.uppercase())) {
-                    profile.put("Gender", "M")
-                } else if (CleverTapConstants.FEMALE_TOKENS.contains(gender.uppercase())) {
-                    profile.put("Gender", "F")
-                }
+            normalizeGender(traits["Gender"]?.toString())?.let {
+                profile["Gender"] = it
             }
             cl?.onUserLogin(profile)
         } catch (t: Throwable) {
             analytics.log("CleverTap: Error pushing profile $t", LogKind.ERROR)
-            cl?.pushError(t.message, 512)
+            cl?.pushError(t.message, ERROR_CODE)
         }
         return payload
     }
 
-    fun <T> transform(input: Map<String, T>, mapper: Map<String, String>) =
-        input.mapKeys { (key, _) -> mapper[key].takeUnless { it.isNullOrEmpty() } ?: key }.toMutableMap()
+    private fun normalizeGender(gender: String?): String? = when (gender?.uppercase()) {
+        in MALE_TOKENS -> "M"
+        in FEMALE_TOKENS -> "F"
+        else -> null
+    }
 
-    fun JsonObject.toPrimitive(): Map<String, Any?> {
+    private fun <T> transform(input: Map<String, T>, mapper: Map<String, String>) =
+        input.mapKeys { (key, _) -> mapper[key] ?: key }.toMutableMap()
+
+    private fun JsonObject.toPrimitive(): Map<String, Any?> {
         return this.mapValues { (_, v) -> v.toContent() }
     }
 
     object CleverTapConstants {
         const val ORDER_COMPLETED_KEY = "Order Completed"
+        const val ERROR_CODE = 512
+        const val LIBRARY_NAME = "CleverTap"
+        
         val MALE_TOKENS = setOf("M", "MALE")
         val FEMALE_TOKENS = setOf("F", "FEMALE")
         val MAP_KNOWN_PROFILE_FIELDS: Map<String, String> = linkedMapOf(
