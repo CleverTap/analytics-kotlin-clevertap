@@ -11,22 +11,19 @@ import com.segment.analytics.kotlin.android.plugins.AndroidLifecycle
 import com.segment.analytics.kotlin.core.AliasEvent
 import com.segment.analytics.kotlin.core.BaseEvent
 import com.segment.analytics.kotlin.core.IdentifyEvent
-import com.segment.analytics.kotlin.core.Properties
 import com.segment.analytics.kotlin.core.ScreenEvent
 import com.segment.analytics.kotlin.core.Settings
 import com.segment.analytics.kotlin.core.TrackEvent
-import com.segment.analytics.kotlin.core.Traits
 import com.segment.analytics.kotlin.core.platform.DestinationPlugin
 import com.segment.analytics.kotlin.core.platform.Plugin
 import com.segment.analytics.kotlin.core.platform.plugins.logger.LogKind
 import com.segment.analytics.kotlin.core.platform.plugins.logger.log
-import com.segment.analytics.kotlin.core.utilities.getDouble
-import com.segment.analytics.kotlin.core.utilities.getMapList
-import com.segment.analytics.kotlin.core.utilities.getString
+import com.segment.analytics.kotlin.core.utilities.toContent
+import com.segment.analytics.kotlin.destinations.CleverTapDestination.CleverTapConstants.CHARGED_KEYS
+import com.segment.analytics.kotlin.destinations.CleverTapDestination.CleverTapConstants.ORDER_COMPLETED_KEY
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
-import kotlin.collections.orEmpty
+import kotlinx.serialization.json.*
 
 @Serializable
 data class CleverTapSettings(
@@ -78,8 +75,8 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
 
         CleverTapAPI.changeCredentials(accountID, accountToken, region)
         cl = CleverTapAPI.getDefaultInstance(context)?.apply {
-            setLibrary("Segment-Android")
-            setCustomSdkVersion("Segment-Android", BuildConfig.VERSION_CODE)
+            setLibrary("Segment-Kotlin")
+            setCustomSdkVersion("Segment-Kotlin", BuildConfig.VERSION_CODE)
         }
 
         analytics.log("Configured CleverTap+Segment integration and initialized CleverTap.")
@@ -150,12 +147,12 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
         super.track(payload)
         val event: String = payload.event
 
-        if (event == "Order Completed") {
-            handleOrderCompleted(payload)
+        val properties = payload.properties.toPrimitive()
+
+        if (event.equals(ORDER_COMPLETED_KEY, ignoreCase = true)) {
+            handleOrderCompleted(properties)
             return payload
         }
-
-        val properties: Properties = payload.properties
 
         try {
             cl?.pushEvent(event, properties)
@@ -166,22 +163,19 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
         return payload
     }
 
-
-    private fun handleOrderCompleted(payload: TrackEvent) {
-        val properties = payload.properties
-
+    private fun handleOrderCompleted(properties: Map<String, Any?>) {
         val details = HashMap<String, Any>()
-        val items = ArrayList<HashMap<String, Any>>()
-
-        details.put("Amount", getTotal(properties))
-
-        val orderId = properties.getString("orderId")
-        if (orderId != null) {
-            details.put("Charged ID", orderId)
-        }
+        //todo check for the need of this
+//        details.put("Amount", getTotal(properties))
+//
+//        val orderId = properties["orderId"]
+//        if (orderId != null) {
+//            details.put("Charged ID", orderId)
+//        }
 
         for (key in properties.keys) {
-            if (key == "products") continue
+            //todo check for the need of this
+            if (CHARGED_KEYS.contains(key.lowercase())) continue
             try {
                 properties[key]?.let { value ->
                     details[key] = value
@@ -190,23 +184,8 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
                 // optionally log t
             }
         }
-        val products = properties.getMapList("products").orEmpty()
 
-        for (product in products) {
-            try {
-                val item = HashMap<String, Any>()
-
-                product["id"]?.let { item["id"] = it }
-                product["name"]?.let { item["name"] = it }
-                product["sku"]?.let { item["sku"] = it }
-                product["price"]?.let { item["price"] = it }
-
-                items.add(item)
-            } catch (t: Throwable) {
-                analytics.log("CleverTap: Error handling Order Completed product $t", LogKind.ERROR)
-                cl?.pushError("Error handling Order Completed product: ${t.message}", 512)
-            }
-        }
+        val items = (properties["products"] as? ArrayList<HashMap<String, Any>>) ?: arrayListOf()
 
         try {
             cl?.pushChargedEvent(details, items)
@@ -216,18 +195,16 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
         }
     }
 
-    private fun getTotal(properties: JsonObject): Double {
-        val total: Double? = properties.getDouble("total")
-        if (total != null) {
-            return total
-        }
-        val revenue: Double? = properties.getDouble("revenue")
-        if (revenue != null) {
-            return revenue
+    private fun getTotal(properties: Map<String, Any?>): Double {
+        fun toDouble(value: Any?): Double? = when (value) {
+            is Number -> value.toDouble()
+            else -> null
         }
 
-        val value: Double? = properties.getDouble("value")
-        return value ?: 0.0
+        return toDouble(properties["total"])
+            ?: toDouble(properties["revenue"])
+            ?: toDouble(properties["value"])
+            ?: 0.0
     }
 
 
@@ -235,7 +212,7 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
 
         super.identify(payload)
 
-        val traits: Traits = payload.traits
+        val traits = payload.traits.toPrimitive()
 
         try {
             val profile = transform<Any?>(
@@ -245,10 +222,10 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
 
             val userId = payload.userId
             if (userId.isNotNullAndBlank()) {
-                profile["Identity"] =  userId
+                profile["Identity"] = userId
             }
 
-            val gender = traits.getString("gender")
+            val gender = traits["Gender"]?.toString()
             if (gender.isNotNullAndBlank()) {
                 if (CleverTapConstants.MALE_TOKENS.contains(gender.uppercase())) {
                     profile.put("Gender", "M")
@@ -264,28 +241,26 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
         return payload
     }
 
-    fun <T> transform(input: Map<String, T>, mapper: Map<String, String>): MutableMap<String, T> =
-        buildMap(input.size) {
-            for ((key, value) in input) {
-                val mappedKey = mapper[key]
-                if (mappedKey.isNullOrEmpty()) {
-                    put(key, value) // keep the original key
-                } else {
-                    put(mappedKey, value)
-                }
-            }
-        }.toMutableMap()
+    fun <T> transform(input: Map<String, T>, mapper: Map<String, String>) =
+        input.mapKeys { (key, _) -> mapper[key].takeUnless { it.isNullOrEmpty() } ?: key }.toMutableMap()
 
+    fun JsonObject.toPrimitive(): Map<String, Any?> {
+        return this.mapValues { (_, v) -> v.toContent() }
+    }
 
     object CleverTapConstants {
+        const val ORDER_COMPLETED_KEY = "Order Completed"
         val MALE_TOKENS = setOf("M", "MALE")
         val FEMALE_TOKENS = setOf("F", "FEMALE")
-
         val MAP_KNOWN_PROFILE_FIELDS: Map<String, String> = linkedMapOf(
             "phone" to "Phone",
             "name" to "Name",
             "email" to "Email",
-            "birthday" to "DOB"
+            "birthday" to "DOB",
+            "gender" to "Gender"
         )
+
+        //        val CHARGED_KEYS: Set<String> = setOf("orderid", "total", "revenue", "value", "products")
+        val CHARGED_KEYS: Set<String> = setOf("products")
     }
 }
