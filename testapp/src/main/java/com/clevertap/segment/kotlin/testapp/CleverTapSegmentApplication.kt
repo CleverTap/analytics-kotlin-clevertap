@@ -12,7 +12,7 @@ import com.segment.analytics.kotlin.destinations.CleverTapDestination
 class CleverTapSegmentApplication : Application() {
 
     companion object {
-        private const val WRITE_KEY = "cuSIiei29JvXHD24aM8IsDP0ACnjyC9s"
+        private const val WRITE_KEY = "<YOUR WRITE KEY>"
         var analytics: Analytics? = null
     }
 
