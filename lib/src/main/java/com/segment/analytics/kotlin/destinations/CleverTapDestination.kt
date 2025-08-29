@@ -4,6 +4,9 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import com.clevertap.android.sdk.BuildConfig
 import com.clevertap.android.sdk.CleverTapAPI
 import com.segment.analytics.kotlin.android.plugins.AndroidLifecycle
@@ -21,12 +24,13 @@ import com.segment.analytics.kotlin.core.utilities.toContent
 import com.segment.analytics.kotlin.destinations.CleverTapDestination.CleverTapConstants.CHARGED_KEYS
 import com.segment.analytics.kotlin.destinations.CleverTapDestination.CleverTapConstants.ERROR_CODE
 import com.segment.analytics.kotlin.destinations.CleverTapDestination.CleverTapConstants.FEMALE_TOKENS
+import com.segment.analytics.kotlin.destinations.CleverTapDestination.CleverTapConstants.LIBRARY_NAME
 import com.segment.analytics.kotlin.destinations.CleverTapDestination.CleverTapConstants.MALE_TOKENS
 import com.segment.analytics.kotlin.destinations.CleverTapDestination.CleverTapConstants.ORDER_COMPLETED_KEY
-import com.segment.analytics.kotlin.destinations.CleverTapDestination.CleverTapConstants.LIBRARY_NAME
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
+import java.util.concurrent.ConcurrentLinkedQueue
 
 @Serializable
 data class CleverTapSettings(
@@ -42,7 +46,16 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
 
     var cleverTapSettings: CleverTapSettings? = null
 
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    @Volatile
     internal var cl: CleverTapAPI? = null
+
+    @Volatile
+    private var currentActivity: Activity? = null
+
+    // Thread-safe queue for operations before CleverTap is ready
+    private val pendingOperations = ConcurrentLinkedQueue<() -> Unit>()
 
     @SuppressLint("RestrictedApi")
     override fun update(settings: Settings, type: Plugin.UpdateType) {
@@ -82,43 +95,97 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
             setCustomSdkVersion(LIBRARY_NAME, BuildConfig.VERSION_CODE)
         }
 
+        // Execute any pending operations now that CleverTap is initialized
+        if (cl != null && pendingOperations.isNotEmpty()) {
+            analytics.log("Executing ${pendingOperations.size} pending CleverTap operations")
+            mainHandler.post {
+                while (pendingOperations.isNotEmpty()) {
+                    val operation = pendingOperations.poll() ?: break
+                    try {
+                        operation()
+                    } catch (t: Throwable) {
+                        analytics.log("Error executing pending operation: $t", LogKind.ERROR)
+                    }
+                }
+            }
+        }
+
         analytics.log("Configured CleverTap+Segment integration and initialized CleverTap.")
+    }
+
+    /**
+     * Safely execute CleverTap operations, queuing them if CleverTap isn't initialized yet
+     */
+    private fun executeCleverTapOperation(operation: () -> Unit) {
+        val cleverTapInstance = cl
+        if (cleverTapInstance != null) {
+            try {
+                operation()
+            } catch (t: Throwable) {
+                analytics.log("CleverTap operation failed: $t", LogKind.ERROR)
+            }
+        } else {
+            analytics.log("CleverTap not initialized yet, queuing operation")
+            pendingOperations.offer(operation)
+        }
     }
 
     override fun onActivityCreated(activity: Activity?, savedInstanceState: Bundle?) {
         super.onActivityCreated(activity, savedInstanceState)
-        CleverTapAPI.setAppForeground(true)
-        try {
-            cl?.pushNotificationClickedEvent(activity?.intent?.extras)
-        } catch (_: Throwable) {
-            // Ignore
-        }
 
-        try {
-            val intent = activity?.intent
-            val data = intent?.data
-            cl?.pushDeepLink(data)
-        } catch (_: Throwable) {
-            // Ignore
+        activity?.let { act ->
+            currentActivity = act
+
+            executeCleverTapOperation {
+                CleverTapAPI.setAppForeground(true)
+                cl?.pushNotificationClickedEvent(act.intent?.extras)
+
+                val intent = act.intent
+                val data = intent?.data
+                cl?.pushDeepLink(data)
+            }
         }
     }
 
 
     override fun onActivityResumed(activity: Activity?) {
         super.onActivityResumed(activity)
-        try {
-            CleverTapAPI.onActivityResumed(activity)
-        } catch (_: Throwable) {
-            // Ignore
+
+        activity?.let { act ->
+            currentActivity = act
+
+            executeCleverTapOperation {
+                Log.i("AnushX", "onActivityResumed")
+                CleverTapAPI.onActivityResumed(act)
+            }
         }
     }
 
     override fun onActivityPaused(activity: Activity?) {
         super.onActivityPaused(activity)
-        try {
+
+        executeCleverTapOperation {
             CleverTapAPI.onActivityPaused()
-        } catch (_: Throwable) {
-            // Ignore
+        }
+
+        if (activity == currentActivity) {
+            currentActivity = null
+        }
+    }
+
+    override fun onActivityStopped(activity: Activity?) {
+        super.onActivityStopped(activity)
+
+        if (activity == currentActivity) {
+            currentActivity = null
+        }
+    }
+
+    override fun onActivityDestroyed(activity: Activity?) {
+        super.onActivityDestroyed(activity)
+
+        if (activity == currentActivity) {
+            currentActivity = null
         }
     }
 
@@ -213,7 +280,6 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
             ?: 0.0
     }
 
-
     override fun identify(payload: IdentifyEvent): BaseEvent? {
         super.identify(payload)
 
@@ -257,7 +323,7 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
         const val ORDER_COMPLETED_KEY = "Order Completed"
         const val ERROR_CODE = 512
         const val LIBRARY_NAME = "CleverTap"
-        
+
         val MALE_TOKENS = setOf("M", "MALE")
         val FEMALE_TOKENS = setOf("F", "FEMALE")
         val MAP_KNOWN_PROFILE_FIELDS: Map<String, String> = linkedMapOf(
