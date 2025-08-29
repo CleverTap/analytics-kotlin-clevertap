@@ -6,7 +6,6 @@ import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import com.clevertap.android.sdk.BuildConfig
 import com.clevertap.android.sdk.CleverTapAPI
 import com.segment.analytics.kotlin.android.plugins.AndroidLifecycle
@@ -155,7 +154,6 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
             currentActivity = act
 
             executeCleverTapOperation {
-                Log.i("AnushX", "onActivityResumed")
                 CleverTapAPI.onActivityResumed(act)
             }
         }
