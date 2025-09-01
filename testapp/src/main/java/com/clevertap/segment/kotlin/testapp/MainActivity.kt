@@ -12,7 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.clevertap.segment.kotlin.testapp.ui.home.HomeScreen
-import com.clevertap.segment.kotlin.testapp.ui.home.MainViewModel
+import com.clevertap.segment.kotlin.testapp.ui.home.HomeViewModel
 import com.clevertap.segment.kotlin.testapp.ui.home.MainViewModelFactory
 
 class MainActivity : ComponentActivity() {
@@ -24,7 +24,7 @@ class MainActivity : ComponentActivity() {
             analytics = CleverTapSegmentApplication.analytics,
         )
 
-        val vm: MainViewModel by viewModels { factory }
+        val vm: HomeViewModel by viewModels { factory }
 
         setContent {
             Surface(

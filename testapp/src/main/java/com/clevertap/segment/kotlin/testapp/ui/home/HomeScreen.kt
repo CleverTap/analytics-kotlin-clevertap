@@ -18,7 +18,7 @@ import com.clevertap.segment.kotlin.testapp.ui.components.ActionButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(viewModel: MainViewModel) {
+fun HomeScreen(viewModel: HomeViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scrollState = rememberScrollState()
@@ -150,6 +150,6 @@ fun HomeScreen(viewModel: MainViewModel) {
 @Composable
 fun HomeScreenPreview() {
     // Create a mock ViewModel for preview
-    val mockViewModel = MainViewModel(null)
+    val mockViewModel = HomeViewModel(null)
     HomeScreen(viewModel = mockViewModel)
 }

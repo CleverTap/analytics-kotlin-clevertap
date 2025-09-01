@@ -19,7 +19,7 @@ data class MainUiState(
     val toastMessage: String? = null
 )
 
-class MainViewModel(
+class HomeViewModel(
     private val analytics: Analytics?,
 ) : ViewModel() {
 
@@ -126,8 +126,8 @@ class MainViewModelFactory(
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
-            return MainViewModel(analytics) as T
+        if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
+            return HomeViewModel(analytics) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
