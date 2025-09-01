@@ -135,6 +135,13 @@ fun HomeScreen(viewModel: HomeViewModel) {
                 HorizontalDivider()
 
                 ActionButton(
+                    text = "Show App Inbox",
+                    onClick = viewModel::showAppInbox,
+                )
+
+                HorizontalDivider()
+
+                ActionButton(
                     text = "Reset Analytics",
                     onClick = viewModel::reset,
                     colors = ButtonDefaults.buttonColors(
@@ -150,6 +157,6 @@ fun HomeScreen(viewModel: HomeViewModel) {
 @Composable
 fun HomeScreenPreview() {
     // Create a mock ViewModel for preview
-    val mockViewModel = HomeViewModel(null)
+    val mockViewModel = HomeViewModel(null, { null })
     HomeScreen(viewModel = mockViewModel)
 }

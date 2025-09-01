@@ -2,6 +2,7 @@ package com.clevertap.segment.kotlin.testapp
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -25,6 +26,7 @@ class MainActivity : ComponentActivity() {
 
         val factory = MainViewModelFactory(
             analytics = CleverTapSegmentApplication.analytics,
+            getCleverTap = { CleverTapSegmentApplication.ct }
         )
 
         val vm: HomeViewModel by viewModels { factory }
@@ -47,7 +49,11 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
     }
 
+
     private fun handleIntent(intent: Intent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            CleverTapSegmentApplication.ct?.pushNotificationClickedEvent(intent.extras)
+        }
         if (Intent.ACTION_VIEW == intent.action) {
             val data = intent.data
             if (data != null) {

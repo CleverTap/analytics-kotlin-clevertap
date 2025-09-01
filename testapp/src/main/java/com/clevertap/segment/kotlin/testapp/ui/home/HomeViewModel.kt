@@ -2,6 +2,7 @@ package com.clevertap.segment.kotlin.testapp.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.clevertap.android.sdk.CleverTapAPI
 import com.segment.analytics.kotlin.core.Analytics
 import com.segment.analytics.kotlin.destinations.CleverTapUtils
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,7 @@ data class MainUiState(
 
 class HomeViewModel(
     private val analytics: Analytics?,
+    private val getCleverTap: () -> CleverTapAPI?,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MainUiState())
@@ -78,6 +80,11 @@ class HomeViewModel(
         showToast("reset() called")
     }
 
+    fun showAppInbox() {
+        getCleverTap()?.showAppInbox()
+        showToast("Showing AppInbox")
+    }
+
     fun track() {
         analytics?.track("testEvent", buildJsonObject {
             put("value", "testValue")
@@ -123,11 +130,12 @@ class HomeViewModel(
 
 class MainViewModelFactory(
     private val analytics: Analytics?,
+    private val getCleverTap: () -> CleverTapAPI?,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
-            return HomeViewModel(analytics) as T
+            return HomeViewModel(analytics, getCleverTap) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
