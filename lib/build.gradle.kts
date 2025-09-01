@@ -47,7 +47,7 @@ dependencies {
     implementation("androidx.multidex:multidex:2.0.1")
     implementation("androidx.core:core-ktx:1.13.0")
 
-    api("com.clevertap.android:clevertap-android-sdk:7.5.0")
+    api("com.clevertap.android:clevertap-android-sdk:7.5.1")
 }
 
 //// Test Dependencies
