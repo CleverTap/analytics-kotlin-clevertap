@@ -266,7 +266,7 @@ class CleverTapDestination(
                 profile["Identity"] = userId
             }
 
-            normalizeGender(traits["Gender"]?.toString())?.let {
+            normalizeGender(profile["Gender"]?.toString())?.let {
                 profile["Gender"] = it
             }
             cl?.onUserLogin(profile)
