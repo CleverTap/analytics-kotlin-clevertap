@@ -29,6 +29,7 @@ import com.segment.analytics.kotlin.destinations.CleverTapDestination.CleverTapC
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
+import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentLinkedQueue
 
 @Serializable
@@ -40,7 +41,10 @@ data class CleverTapSettings(
     val region: String,
 )
 
-class CleverTapDestination(private val context: Context) : DestinationPlugin(), AndroidLifecycle {
+class CleverTapDestination(
+    private val context: Context,
+    private val onInitCompleted: ((CleverTapAPI) -> Unit)? = null
+) : DestinationPlugin(), AndroidLifecycle {
     override val key: String = "CleverTap"
 
     var cleverTapSettings: CleverTapSettings? = null
@@ -51,7 +55,7 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
     internal var cl: CleverTapAPI? = null
 
     @Volatile
-    private var currentActivity: Activity? = null
+    private var currentActivityRef: WeakReference<Activity>? = null
 
     // Thread-safe queue for operations before CleverTap is ready
     private val pendingOperations = ConcurrentLinkedQueue<() -> Unit>()
@@ -110,6 +114,11 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
         }
 
         analytics.log("Configured CleverTap+Segment integration and initialized CleverTap.")
+
+        // Call the initialization callback with the CleverTap instance if provided
+        cl?.let { cleverTapInstance ->
+            onInitCompleted?.invoke(cleverTapInstance)
+        }
     }
 
     /**
@@ -133,11 +142,12 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
         super.onActivityCreated(activity, savedInstanceState)
 
         activity?.let { act ->
-            currentActivity = act
+            currentActivityRef = WeakReference(act)
 
             executeCleverTapOperation {
+                analytics.log("Executing onActivityCreated")
                 CleverTapAPI.setAppForeground(true)
-                cl?.pushNotificationClickedEvent(act.intent?.extras)
+                cl?.pushNotificationClickedEvent(currentActivityRef?.get()?.intent?.extras)
 
                 val intent = act.intent
                 val data = intent?.data
@@ -151,10 +161,11 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
         super.onActivityResumed(activity)
 
         activity?.let { act ->
-            currentActivity = act
+            currentActivityRef = WeakReference(act)
 
             executeCleverTapOperation {
-                CleverTapAPI.onActivityResumed(act)
+                analytics.log("Executing onActivityResumed")
+                CleverTapAPI.onActivityResumed(currentActivityRef?.get())
             }
         }
     }
@@ -163,27 +174,8 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
         super.onActivityPaused(activity)
 
         executeCleverTapOperation {
+            analytics.log("Executing onActivityPaused")
             CleverTapAPI.onActivityPaused()
-        }
-
-        if (activity == currentActivity) {
-            currentActivity = null
-        }
-    }
-
-    override fun onActivityStopped(activity: Activity?) {
-        super.onActivityStopped(activity)
-
-        if (activity == currentActivity) {
-            currentActivity = null
-        }
-    }
-
-    override fun onActivityDestroyed(activity: Activity?) {
-        super.onActivityDestroyed(activity)
-
-        if (activity == currentActivity) {
-            currentActivity = null
         }
     }
 
@@ -237,21 +229,13 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
 
     private fun handleOrderCompleted(properties: Map<String, Any?>) {
         val details = HashMap<String, Any>()
-        //todo check for the need of this
-//        details.put("Amount", getTotal(properties))
-//
-//        val orderId = properties["orderId"]
-//        if (orderId != null) {
-//            details.put("Charged ID", orderId)
-//        }
         for (key in properties.keys) {
-            //todo check for the need of this
             if (CHARGED_KEYS.contains(key.lowercase())) continue
             try {
                 properties[key]?.let { value ->
                     details[key] = value
                 }
-            } catch (t : Throwable) {
+            } catch (t: Throwable) {
                 analytics.log("CleverTap: Error adding $key to properties due to $t", LogKind.ERROR)
             }
         }
@@ -266,17 +250,6 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
         }
     }
 
-    private fun getTotal(properties: Map<String, Any?>): Double {
-        fun toDouble(value: Any?): Double? = when (value) {
-            is Number -> value.toDouble()
-            else -> null
-        }
-
-        return toDouble(properties["total"])
-            ?: toDouble(properties["revenue"])
-            ?: toDouble(properties["value"])
-            ?: 0.0
-    }
 
     override fun identify(payload: IdentifyEvent): BaseEvent? {
         super.identify(payload)
@@ -332,7 +305,6 @@ class CleverTapDestination(private val context: Context) : DestinationPlugin(), 
             "gender" to "Gender"
         )
 
-        //        val CHARGED_KEYS: Set<String> = setOf("orderid", "total", "revenue", "value", "products")
         val CHARGED_KEYS: Set<String> = setOf("products")
     }
 }
