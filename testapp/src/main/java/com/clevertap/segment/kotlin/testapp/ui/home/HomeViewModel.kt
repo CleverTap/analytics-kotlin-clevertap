@@ -85,6 +85,11 @@ class HomeViewModel(
         showToast("Showing AppInbox")
     }
 
+    fun getAllDisplayUnits() {
+        val displayUnits = getCleverTap()?.allDisplayUnits
+        showToast("Display Units = $displayUnits")
+    }
+
     fun track() {
         analytics?.track("testEvent", buildJsonObject {
             put("value", "testValue")

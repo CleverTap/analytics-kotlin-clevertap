@@ -139,6 +139,11 @@ fun HomeScreen(viewModel: HomeViewModel) {
                     onClick = viewModel::showAppInbox,
                 )
 
+                ActionButton(
+                    text = "Get All Display Units",
+                    onClick = viewModel::getAllDisplayUnits,
+                )
+
                 HorizontalDivider()
 
                 ActionButton(
