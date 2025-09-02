@@ -98,6 +98,7 @@ class CleverTapDestinationTest {
 
         destination = CleverTapDestination(mockContext)
         destination.analytics = mockAnalytics
+        destination.cl = mockCleverTapAPI
     }
 
     @After
@@ -114,6 +115,7 @@ class CleverTapDestinationTest {
     fun `test update with valid settings initializes CleverTap`() {
         // Given
         val settings = getMockSettings()
+        destination.cl = null // will be init from setup
 
         // When
         destination.update(settings, Plugin.UpdateType.Initial)
@@ -201,10 +203,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test onActivityCreated sets app foreground and processes intent`() {
-        // Given
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
-
         // When
         destination.onActivityCreated(mockActivity, mockBundle)
 
@@ -216,11 +214,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test onActivityCreated with null activity does nothing`() {
-        // Given
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
-
-        // When
         destination.onActivityCreated(null, mockBundle)
 
         // Then
@@ -229,10 +222,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test onActivityResumed calls CleverTap API`() {
-        // Given
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
-
         // When
         destination.onActivityResumed(mockActivity)
 
@@ -242,10 +231,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test onActivityResumed with null activity does nothing`() {
-        // Given
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
-
         // When
         destination.onActivityResumed(null)
 
@@ -255,10 +240,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test onActivityPaused calls CleverTap API`() {
-        // Given
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
-
         // When
         destination.onActivityPaused(mockActivity)
 
@@ -268,9 +249,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test alias with valid userId creates profile`() {
-        // Given
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
         val aliasEvent = mockk<AliasEvent>()
         every { aliasEvent.userId } returns "test-user-id"
 
@@ -288,9 +266,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test alias with empty userId returns event without processing`() {
-        // Given
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
         val aliasEvent = mockk<AliasEvent>()
         every { aliasEvent.userId } returns ""
 
@@ -304,9 +279,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test alias handles exceptions gracefully`() {
-        // Given
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
         every { mockCleverTapAPI.pushProfile(any()) } throws RuntimeException("Test exception")
         val aliasEvent = mockk<AliasEvent>()
         every { aliasEvent.userId } returns "test-user-id"
@@ -321,9 +293,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test screen records screen name`() {
-        // Given
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
         val screenEvent = mockk<ScreenEvent>()
         every { screenEvent.name } returns "Home Screen"
 
@@ -337,9 +306,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test screen handles exceptions gracefully`() {
-        // Given
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
         every { mockCleverTapAPI.recordScreen(any()) } throws RuntimeException("Test exception")
         val screenEvent = mockk<ScreenEvent>()
         every { screenEvent.name } returns "Home Screen"
@@ -353,9 +319,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test track with valid event pushes to CleverTap`() {
-        // Given
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
         val trackEvent = createTrackEvent("Button Clicked", buildJsonObject {
             put("button_name", JsonPrimitive("submit"))
             put("page", JsonPrimitive("checkout"))
@@ -375,9 +338,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test track with blank event name returns early`() {
-        // Given
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
         val trackEvent = createTrackEvent("", buildJsonObject {})
 
         // When
@@ -390,9 +350,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test track with Order Completed event calls pushChargedEvent`() {
-        // Given
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
         val products = listOf(
             mapOf("name" to "Product 1", "price" to 10.0),
             mapOf("name" to "Product 2", "price" to 20.0)
@@ -413,9 +370,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test track handles exceptions gracefully`() {
-        // Given
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
         every { mockCleverTapAPI.pushEvent(any(), any()) } throws RuntimeException("Test exception")
         val trackEvent = createTrackEvent("Button Clicked", buildJsonObject {})
 
@@ -429,9 +383,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test identify with valid user data calls onUserLogin`() {
-        // Given
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
         val identifyEvent = createIdentifyEvent("user123", buildJsonObject {
             put("email", JsonPrimitive("test@example.com"))
             put("name", JsonPrimitive("John Doe"))
@@ -457,9 +408,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test identify with blank userId still processes traits`() {
-        // Given
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
         val identifyEvent = createIdentifyEvent("", buildJsonObject {
             put("email", JsonPrimitive("test@example.com"))
         })
@@ -479,9 +427,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test identify normalizes gender correctly`() {
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
-
         // Test male gender normalization
         val maleEvent = createIdentifyEvent("user1", buildJsonObject {
             put("gender", JsonPrimitive("MALE"))
@@ -525,9 +470,6 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test identify handles exceptions gracefully`() {
-        // Given
-        val settings = getMockSettings()
-        destination.update(settings, Plugin.UpdateType.Initial)
         every { mockCleverTapAPI.onUserLogin(any()) } throws RuntimeException("Test exception")
         val identifyEvent = createIdentifyEvent("user123", buildJsonObject {})
 
