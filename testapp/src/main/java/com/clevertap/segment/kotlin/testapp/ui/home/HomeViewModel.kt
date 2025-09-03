@@ -8,7 +8,6 @@ import com.segment.analytics.kotlin.destinations.CleverTapUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.serialization.json.*
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -42,25 +41,21 @@ class HomeViewModel(
         val email = _uiState.value.email.takeIf { it.isNotBlank() } ?: "joe$id@gmail.com"
         val name = "Joe$id"
         val phone = "+91-$id"
-        analytics?.identify(
-            userId,
-            buildJsonObject {
-                put("name", name)
-                put("email", email)
-                put("phone", phone)
-                put("gender", "M")
-                put("boolean", true)
-                put("integer", 50)
-                put("float", 1.5)
-                put("long", 12345L)
-                put("string", "hello")
-                put("stringInt", "1")
-                put("testStringArr", buildJsonArray {
-                    add("one")
-                    add("two")
-                    add("three")
-                })
-            })
+
+        val traits = HashMap<String, Any>()
+        traits["name"] = name
+        traits["email"] = email
+        traits["phone"] = phone
+        traits["gender"] = "M"
+        traits["boolean"] = true
+        traits["integer"] = 50
+        traits["float"] = 1.5
+        traits["long"] = 12345L
+        traits["string"] = "hello"
+        traits["stringInt"] = "1"
+        traits["testStringArr"] = arrayListOf("one", "two", "three")
+
+        analytics?.identify(userId, traits)
     }
 
     fun screen() {
@@ -91,34 +86,37 @@ class HomeViewModel(
     }
 
     fun track() {
-        analytics?.track("testEvent", buildJsonObject {
-            put("value", "testValue")
-            put("valueInt", 23)
-            put("valueLong", 2334235235L)
-            put("valueFloat", 23.4)
-            put("valueBoolean", true)
-            put("valueDate", CleverTapUtils.getClevertapDate(SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).parse("01/12/1991")?: Date()))
-        })
+        val properties = HashMap<String, Any>()
+        properties["value"] = "testValue"
+        properties["valueInt"] = 23
+        properties["valueLong"] = 2334235235L
+        properties["valueFloat"] = 23.4
+        properties["valueBoolean"] = true
+        properties["valueDate"] = CleverTapUtils.getClevertapDate(SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).parse("01/12/1991") ?: Date())
+
+        analytics?.track("testEvent", properties)
     }
 
     fun trackOrderCompleted() {
         // Track ecommerce event
-        analytics?.track("Order Completed", buildJsonObject {
-            put("orderId", "123456")
-            put("revenue", 100)
-            put("products", buildJsonArray {
-                addJsonObject {
-                    put("id", "id1")
-                    put("sku", "sku1")
-                    put("price", 100)
-                }
-                addJsonObject {
-                    put("id", "id2")
-                    put("sku", "sku2")
-                    put("price", 200)
-                }
-            })
-        })
+        val product1 = HashMap<String, Any>()
+        product1["id"] = "id1"
+        product1["sku"] = "sku1"
+        product1["price"] = 100
+
+        val product2 = HashMap<String, Any>()
+        product2["id"] = "id2"
+        product2["sku"] = "sku2"
+        product2["price"] = 200
+
+        val products = arrayListOf(product1, product2)
+
+        val properties = HashMap<String, Any>()
+        properties["orderId"] = "123456"
+        properties["revenue"] = 100
+        properties["products"] = products
+
+        analytics?.track("Order Completed", properties)
     }
 
     private fun showToast(message: String) {
