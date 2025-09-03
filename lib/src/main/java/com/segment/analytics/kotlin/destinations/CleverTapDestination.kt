@@ -6,6 +6,7 @@ import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import androidx.annotation.VisibleForTesting
 import com.clevertap.android.sdk.BuildConfig
 import com.clevertap.android.sdk.CleverTapAPI
 import com.segment.analytics.kotlin.android.plugins.AndroidLifecycle
@@ -49,7 +50,11 @@ class CleverTapDestination(
 
     var cleverTapSettings: CleverTapSettings? = null
 
-    private val mainHandler = Handler(Looper.getMainLooper())
+    @VisibleForTesting
+    internal var mainHandlerTestingMock: Handler? = null
+
+    private val mainHandler: Handler
+        get() = mainHandlerTestingMock ?: Handler(Looper.getMainLooper())
 
     @Volatile
     internal var cl: CleverTapAPI? = null
