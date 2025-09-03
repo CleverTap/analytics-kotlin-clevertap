@@ -6,8 +6,6 @@ plugins {
     id("mvn-publish")
 }
 
-val VERSION_NAME: String by project
-
 android {
     namespace = "com.segment.analytics.kotlin.destinations.clevertap"
     compileSdk = 35
@@ -20,7 +18,8 @@ android {
         testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("proguard-consumer-rules.pro")
 
-        buildConfigField("String", "VERSION_NAME", "\"$VERSION_NAME\"")
+        buildConfigField("String", "VERSION_NAME", "\"${project.property("VERSION_NAME")}\"")
+        buildConfigField("int", "VERSION_CODE", "${project.property("VERSION_CODE")}")
     }
 
     buildTypes {

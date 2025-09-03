@@ -6,7 +6,7 @@ import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import com.clevertap.android.sdk.BuildConfig
+import com.segment.analytics.kotlin.destinations.clevertap.BuildConfig
 import com.clevertap.android.sdk.CleverTapAPI
 import com.segment.analytics.kotlin.android.plugins.AndroidLifecycle
 import com.segment.analytics.kotlin.core.AliasEvent
@@ -266,7 +266,7 @@ class CleverTapDestination(
                 profile["Identity"] = userId
             }
 
-            normalizeGender(traits["Gender"]?.toString())?.let {
+            normalizeGender(profile["Gender"]?.toString())?.let {
                 profile["Gender"] = it
             }
             cl?.onUserLogin(profile)
@@ -293,7 +293,7 @@ class CleverTapDestination(
     object CleverTapConstants {
         const val ORDER_COMPLETED_KEY = "Order Completed"
         const val ERROR_CODE = 512
-        const val LIBRARY_NAME = "CleverTap"
+        const val LIBRARY_NAME = "Segment-Kotlin"
 
         val MALE_TOKENS = setOf("M", "MALE")
         val FEMALE_TOKENS = setOf("F", "FEMALE")
