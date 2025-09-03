@@ -1,25 +1,40 @@
-// add badges and stuff here
+# CleverTap Analytics Kotlin SDK
 
-# Destination
+CleverTap destination plugin for Segment Analytics Kotlin. 
 
-## Getting Started
+## Installation
 
-1. Create repo from this template. The name of the repo should follow this pattern `project-language-destination`. For example `analytics-kotlin-firebase`
-2. In `settings.gralde.kts`, change `rootProject.name` to match your repo name.
-3. In `gradle.properties`, update the fields with `<>` brackets
-4. Delete `com.segment.analytics.kotlin.destinations.Destination.kt`
-5. Create a directory with the destination name under `com.segment.analytics.kotlin.destinations`. For example Firebase, `com.segment.analytics.kotlin.destinations.firebase`
-6. Create your destination class under the directory created in step 5. For example Firebase, `com.segment.analytics.kotlin.destinations.firebase.Firebase.kt`
-7. update Android manifest with your package name. For example Firebase
-   ```xml
-    <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-        package="com.segment.analytics.kotlin.destinations.firebase">
-   ```
-8. Implement destination
-9. Add tests
+Add the following dependencies to your `build.gradle.kts` file:
 
+```kotlin
+dependencies {
+    implementation("com.clevertap.android:clevertap-android-sdk:7.5.1")
+    implementation("com.segment.analytics.kotlin:android:1.21.0")
+    implementation("com.clevertap.android:clevertap-segment.kotlin:1.0.0") // todo change based on the published namespace
+}
+```
+
+## Quick Start
+
+```kotlin
+// Initialize
+analytics = Analytics(WRITE_KEY, applicationContext).apply {
+    this.add(plugin = CleverTapDestination(applicationContext, ::cleverTapReady))
+}
+```
+
+## Documentation
+
+- **[Usage Guide](docs/Usage.md)** - Comprehensive guide on how to use the SDK
+- **[Sample App](testapp)** - Complete example application demonstrating all features
+- **[Changelog](CHANGELOG.md)** - Version history and release notes
+
+
+## Requirements
+- Android API level 21+
 
 ## License
+
 ```
 MIT License
 
