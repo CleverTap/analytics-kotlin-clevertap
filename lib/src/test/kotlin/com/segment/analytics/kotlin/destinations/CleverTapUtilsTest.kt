@@ -58,14 +58,16 @@ class CleverTapUtilsTest {
     @Test
     fun `test integration with real Date operations`() {
         // Given - create dates using various methods
-        val calendar = Calendar.getInstance(Locale.getDefault())
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"), Locale.US)
         calendar.set(2023, Calendar.JANUARY, 15, 10, 30, 45)
         calendar.set(Calendar.MILLISECOND, 500)
 
         val dateFromCalendar = calendar.time
         val dateFromMillis = Date(calendar.timeInMillis)
-        val dateSDF = SimpleDateFormat("dd/MM/yyyy/HH/mm/ss", Locale.getDefault()).parse("15/01/2023/10/30/45")
-
+        val sdf = SimpleDateFormat("dd/MM/yyyy/HH/mm/ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val dateSDF = sdf.parse("15/01/2023/10/30/45")
         // When
         val result1 = CleverTapUtils.getClevertapDate(dateFromCalendar)
         val result2 = CleverTapUtils.getClevertapDate(dateFromMillis)
