@@ -669,6 +669,42 @@ class CleverTapDestinationTest {
     }
 
     @Test
+    fun `test onInitCompleted callback when clevertap is null`() {
+        // Given
+        val onInitCompleted = mockk<(CleverTapAPI) -> Unit>()
+        every { onInitCompleted.invoke(any()) } just runs
+        val destination = CleverTapDestination(mockContext, onInitCompleted)
+        destination.analytics = mockAnalytics
+        every { CleverTapAPI.getDefaultInstance(any()) } returns null
+
+        // When
+        val settings = getMockSettings()
+        destination.update(settings, Plugin.UpdateType.Initial)
+
+        // Then
+        verify(exactly = 0) { onInitCompleted.invoke(any()) }
+    }
+
+    @Test
+    fun `test error handling with null clevertap and complex order event`() {
+        destination.cl = null
+        
+        // Given - complex Order Completed event that would normally trigger special handling
+        val orderEvent = createTrackEvent("Order Completed", buildJsonObject {
+            put("revenue", JsonPrimitive(150.75))
+            put("order_id", JsonPrimitive("ORDER-2024-001"))
+        })
+
+        // When
+        val result = destination.track(orderEvent)
+
+        // Then - should handle gracefully without calling any CleverTap methods
+        verify(exactly = 0) { mockCleverTapAPI.pushChargedEvent(any(), any()) }
+        verify(exactly = 0) { mockCleverTapAPI.pushError(any(), any()) }
+        assertEquals(orderEvent, result)
+    }
+
+    @Test
     fun `test region string is properly cleaned`() {
         // Given - settings with dots in region
         val settings = getMockSettings(region = "in1.abc.xyz")
