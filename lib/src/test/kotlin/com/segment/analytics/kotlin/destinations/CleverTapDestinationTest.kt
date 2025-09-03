@@ -720,8 +720,6 @@ class CleverTapDestinationTest {
     @Test
     fun `test pending operations are executed when CleverTap is initialized`() {
         // Given - destination without initialization
-        val uninitializedDestination = CleverTapDestination(mockContext)
-
         // Mock the mainHandler to capture and execute operations immediately for testing
         val mockHandler = mockk<Handler>()
         every { mockHandler.post(any()) } answers {
@@ -730,8 +728,9 @@ class CleverTapDestinationTest {
             true
         }
 
+        val uninitializedDestination = CleverTapDestination(mockContext, null, mockHandler)
+
         uninitializedDestination.analytics = mockAnalytics
-        uninitializedDestination.mainHandlerTestingMock = mockHandler
 
         // Add some operations to the pending queue before initialization
         uninitializedDestination.onActivityCreated(mockActivity, mockBundle)
