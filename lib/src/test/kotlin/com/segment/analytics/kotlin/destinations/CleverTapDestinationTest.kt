@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
 import com.clevertap.android.sdk.CleverTapAPI
 import com.segment.analytics.kotlin.core.AliasEvent
 import com.segment.analytics.kotlin.core.Analytics
@@ -148,7 +149,7 @@ class CleverTapDestinationTest {
 
     @OptIn(ExperimentalSerializationApi::class)
     @Test
-    fun `test update with null settings does not initialize CleverTap`() {
+    fun `test update with incomplete settings does not initialize CleverTap`() {
         // Given - settings with CleverTap but missing required fields
         val incompleteSettings = JsonObject(
             content = mapOf(
@@ -714,6 +715,43 @@ class CleverTapDestinationTest {
 
         // Then - dots should be removed from region
         verify { CleverTapAPI.changeCredentials(TEST_ACCOUNT_ID, TEST_ACCOUNT_TOKEN, "in1abcxyz") }
+    }
+
+    @Test
+    fun `test pending operations are executed when CleverTap is initialized`() {
+        // Given - destination without initialization
+        val uninitializedDestination = CleverTapDestination(mockContext)
+
+        // Mock the mainHandler to capture and execute operations immediately for testing
+        val mockHandler = mockk<Handler>()
+        every { mockHandler.post(any()) } answers {
+            val runnable = firstArg<Runnable>()
+            runnable.run()
+            true
+        }
+
+        uninitializedDestination.analytics = mockAnalytics
+        uninitializedDestination.mainHandlerTestingMock = mockHandler
+
+        // Add some operations to the pending queue before initialization
+        uninitializedDestination.onActivityCreated(mockActivity, mockBundle)
+        uninitializedDestination.onActivityResumed(mockActivity)
+        uninitializedDestination.onActivityPaused(mockActivity)
+
+        // Verify operations are not executed yet
+        verify(exactly = 0) { CleverTapAPI.setAppForeground(any()) }
+        verify(exactly = 0) { CleverTapAPI.onActivityResumed(any()) }
+        verify(exactly = 0) { CleverTapAPI.onActivityPaused() }
+
+        // When - initialize CleverTap
+        val settings = getMockSettings()
+        uninitializedDestination.update(settings, Plugin.UpdateType.Initial)
+
+        // Then - pending operations should be executed
+        verify { mockHandler.post(any()) }
+        verify { CleverTapAPI.setAppForeground(true) }
+        verify { CleverTapAPI.onActivityResumed(mockActivity) }
+        verify { CleverTapAPI.onActivityPaused() }
     }
 
     // Helper methods for creating events
