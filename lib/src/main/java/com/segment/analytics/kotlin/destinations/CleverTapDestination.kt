@@ -41,15 +41,20 @@ data class CleverTapSettings(
     val region: String,
 )
 
-class CleverTapDestination(
+class CleverTapDestination internal constructor(
     private val context: Context,
-    private val onInitCompleted: ((CleverTapAPI) -> Unit)? = null
+    private val onInitCompleted: ((CleverTapAPI) -> Unit)? = null,
+    private val mainHandler: Handler
 ) : DestinationPlugin(), AndroidLifecycle {
+
+    constructor(
+        context: Context,
+        onInitCompleted: ((CleverTapAPI) -> Unit)? = null
+    ) : this(context, onInitCompleted, Handler(Looper.getMainLooper()))
+
     override val key: String = "CleverTap"
 
     var cleverTapSettings: CleverTapSettings? = null
-
-    private val mainHandler = Handler(Looper.getMainLooper())
 
     @Volatile
     internal var cl: CleverTapAPI? = null
@@ -293,7 +298,7 @@ class CleverTapDestination(
     object CleverTapConstants {
         const val ORDER_COMPLETED_KEY = "Order Completed"
         const val ERROR_CODE = 512
-        const val LIBRARY_NAME = "Segment-Kotlin"
+        const val LIBRARY_NAME = "CleverTap"
 
         val MALE_TOKENS = setOf("M", "MALE")
         val FEMALE_TOKENS = setOf("F", "FEMALE")
