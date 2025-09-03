@@ -97,8 +97,6 @@ class HomeViewModel(
             put("valueLong", 2334235235L)
             put("valueFloat", 23.4)
             put("valueBoolean", true)
-            put("valueInt", 23)
-            put("valueInt", 23)
             put("valueDate", CleverTapUtils.getClevertapDate(SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).parse("01/12/1991")?: Date()))
         })
     }

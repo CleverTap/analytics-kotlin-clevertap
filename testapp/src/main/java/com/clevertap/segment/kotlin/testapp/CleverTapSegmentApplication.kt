@@ -42,7 +42,7 @@ class CleverTapSegmentApplication : Application() {
                 "BRTesting", 
                 "YourChannelName",
                 "YourChannelDescription",
-                NotificationManager.IMPORTANCE_MAX, 
+                NotificationManager.IMPORTANCE_HIGH,
                 true
             )
         }
