@@ -213,6 +213,19 @@ class CleverTapDestinationTest {
         verify { mockCleverTapAPI.pushDeepLink(mockUri) }
     }
 
+
+    @Test
+    fun `test onActivityCreated with clevertap null`() {
+        destination.cl = null
+        destination.onActivityCreated(mockActivity, mockBundle)
+
+        // Then
+        verify(exactly = 0) { CleverTapAPI.setAppForeground(true) }
+        verify(exactly = 0) { mockCleverTapAPI.pushNotificationClickedEvent(any()) }
+        verify(exactly = 0) { mockCleverTapAPI.pushDeepLink(any()) }
+    }
+
+
     @Test
     fun `test onActivityCreated with null activity does nothing`() {
         destination.onActivityCreated(null, mockBundle)
@@ -246,6 +259,20 @@ class CleverTapDestinationTest {
 
         // Then
         verify { CleverTapAPI.onActivityPaused() }
+    }
+
+    @Test
+    fun `test alias with clevertap null`() {
+        destination.cl = null
+        val aliasEvent = mockk<AliasEvent>()
+        every { aliasEvent.userId } returns "test-user-id"
+
+        // When
+        val result = destination.alias(aliasEvent)
+
+        // Then
+        verify(exactly = 0) { mockCleverTapAPI.pushProfile(any()) }
+        assertEquals(aliasEvent, result)
     }
 
     @Test
@@ -293,6 +320,20 @@ class CleverTapDestinationTest {
     }
 
     @Test
+    fun `test screen with clevertap null`() {
+        destination.cl = null
+        val screenEvent = mockk<ScreenEvent>()
+        every { screenEvent.name } returns "Home Screen"
+
+        // When
+        val result = destination.screen(screenEvent)
+
+        // Then
+        verify(exactly = 0) { mockCleverTapAPI.recordScreen(any()) }
+        assertEquals(screenEvent, result)
+    }
+
+    @Test
     fun `test screen records screen name`() {
         val screenEvent = mockk<ScreenEvent>()
         every { screenEvent.name } returns "Home Screen"
@@ -316,6 +357,22 @@ class CleverTapDestinationTest {
 
         // Then - should not crash and return the event
         assertEquals(screenEvent, result)
+    }
+
+    @Test
+    fun `test track with clevertap null`() {
+        destination.cl = null
+        val trackEvent = createTrackEvent("Button Clicked", buildJsonObject {
+            put("button_name", JsonPrimitive("submit"))
+            put("page", JsonPrimitive("checkout"))
+        })
+
+        // When
+        val result = destination.track(trackEvent)
+
+        // Then
+        verify(exactly = 0) { mockCleverTapAPI.pushEvent(any(), any()) }
+        assertEquals(trackEvent, result)
     }
 
     @Test
@@ -350,7 +407,9 @@ class CleverTapDestinationTest {
     }
 
     @Test
-    fun `test track with Order Completed event calls pushChargedEvent`() {
+    fun `test track with Order Completed handles exception gracefully`() {
+        every { mockCleverTapAPI.pushChargedEvent(any(), any()) } throws RuntimeException("Test exception")
+
         val trackEvent = createTrackEvent("Order Completed", buildJsonObject {
             put("revenue", JsonPrimitive(30.0))
             put("order_id", JsonPrimitive("12345"))
@@ -370,7 +429,76 @@ class CleverTapDestinationTest {
         val result = destination.track(trackEvent)
 
         // Then
-        verify { mockCleverTapAPI.pushChargedEvent(any(), any()) }
+        verify { mockCleverTapAPI.pushError("Error handling Order Completed: Test exception", 512) }
+        assertEquals(trackEvent, result)
+    }
+
+    @Test
+    fun `test track with Order Completed event calls pushChargedEvent with correct args`() {
+        val trackEvent = createTrackEvent("Order Completed", buildJsonObject {
+            put("revenue", JsonPrimitive(30.0))
+            put("order_id", JsonPrimitive("12345"))
+            put("products", buildJsonArray {
+                add(buildJsonObject {
+                    put("name", JsonPrimitive("Product 1"))
+                    put("price", JsonPrimitive(10.0))
+                })
+                add(buildJsonObject {
+                    put("name", JsonPrimitive("Product 2"))
+                    put("price", JsonPrimitive(20.0))
+                })
+            })
+        })
+
+        // Capture arguments
+        val detailsSlot = slot<HashMap<String, Any>>()
+        val itemsSlot = slot<ArrayList<HashMap<String, Any>>>()
+
+        // When
+        val result = destination.track(trackEvent)
+
+        // Then
+        verify {
+            mockCleverTapAPI.pushChargedEvent(capture(detailsSlot), capture(itemsSlot))
+        }
+        assertEquals(trackEvent, result)
+
+        val details = detailsSlot.captured
+        assertEquals(12345, details["order_id"])
+        assertEquals(30.0, details["revenue"])
+
+        // Assert items
+        val items = itemsSlot.captured
+        assertEquals(2, items.size)
+        assertEquals("Product 1", items[0]["name"])
+        assertEquals(10.0, items[0]["price"])
+        assertEquals("Product 2", items[1]["name"])
+        assertEquals(20.0, items[1]["price"])
+    }
+
+    @Test
+    fun `test track with Order Completed event with clevertap null`() {
+        destination.cl = null
+        val trackEvent = createTrackEvent("Order Completed", buildJsonObject {
+            put("revenue", JsonPrimitive(30.0))
+            put("order_id", JsonPrimitive("12345"))
+            put("products", buildJsonArray {
+                add(buildJsonObject {
+                    put("name", JsonPrimitive("Product 1"))
+                    put("price", JsonPrimitive(10.0))
+                })
+                add(buildJsonObject {
+                    put("name", JsonPrimitive("Product 2"))
+                    put("price", JsonPrimitive(20.0))
+                })
+            })
+        })
+
+        // When
+        val result = destination.track(trackEvent)
+
+        // Then
+        verify(exactly = 0) { mockCleverTapAPI.pushChargedEvent(any(), any()) }
         assertEquals(trackEvent, result)
     }
 
@@ -387,6 +515,22 @@ class CleverTapDestinationTest {
         assertEquals(trackEvent, result)
     }
 
+
+    @Test
+    fun `test identify with valid user data but clevertap null`() {
+        destination.cl = null
+        val identifyEvent = createIdentifyEvent("user123", buildJsonObject {
+            put("email", JsonPrimitive("test@example.com"))
+        })
+
+        // When
+        val result = destination.identify(identifyEvent)
+
+        // Then - Match the actual values being passed
+        verify (exactly = 0) { mockCleverTapAPI.onUserLogin(any()) }
+        assertEquals(identifyEvent, result)
+    }
+
     @Test
     fun `test identify with valid user data calls onUserLogin`() {
         val identifyEvent = createIdentifyEvent("user123", buildJsonObject {
@@ -394,6 +538,7 @@ class CleverTapDestinationTest {
             put("name", JsonPrimitive("John Doe"))
             put("phone", JsonPrimitive("+12-34567890"))
             put("gender", JsonPrimitive("male"))
+            put("custom", JsonPrimitive("value"))
         })
 
         // When
@@ -407,6 +552,7 @@ class CleverTapDestinationTest {
                         profile["Name"] == "John Doe" &&
                         profile["Phone"] == "+12-34567890" &&
                         profile["Gender"] == "M"
+                        profile["custom"] == "value"
             })
         }
         assertEquals(identifyEvent, result)
