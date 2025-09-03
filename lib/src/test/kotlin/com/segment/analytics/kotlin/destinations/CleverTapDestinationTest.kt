@@ -20,6 +20,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.MissingFieldException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import org.junit.After
 import org.junit.Assert.*
@@ -350,14 +351,19 @@ class CleverTapDestinationTest {
 
     @Test
     fun `test track with Order Completed event calls pushChargedEvent`() {
-        val products = listOf(
-            mapOf("name" to "Product 1", "price" to 10.0),
-            mapOf("name" to "Product 2", "price" to 20.0)
-        )
         val trackEvent = createTrackEvent("Order Completed", buildJsonObject {
             put("revenue", JsonPrimitive(30.0))
             put("order_id", JsonPrimitive("12345"))
-            put("products", JsonPrimitive(products.toString())) // Simplified for test
+            put("products", buildJsonArray {
+                add(buildJsonObject {
+                    put("name", JsonPrimitive("Product 1"))
+                    put("price", JsonPrimitive(10.0))
+                })
+                add(buildJsonObject {
+                    put("name", JsonPrimitive("Product 2"))
+                    put("price", JsonPrimitive(20.0))
+                })
+            })
         })
 
         // When
