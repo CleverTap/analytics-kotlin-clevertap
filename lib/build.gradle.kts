@@ -1,10 +1,33 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.library")
     kotlin("android")
-
     id("org.jetbrains.kotlin.plugin.serialization")
-    id("mvn-publish")
+    id("com.vanniktech.maven.publish")
 }
+
+// gradle.properties
+val publishedGroupId = project.findProperty("clevertapPublishedGroupId") as String
+val artifactId = project.findProperty("clevertapArtifactId") as String
+val libraryVersion = project.findProperty("VERSION_NAME") as String
+val libraryDescription = project.findProperty("clevertapLibraryDescription") as String
+val siteUrl = project.findProperty("siteUrl") as String
+val gitUrl = project.findProperty("gitUrl") as String
+val licenseName = project.findProperty("licenseName") as String
+val licenseUrl = project.findProperty("licenseUrl") as String
+
+// local.properties
+val localPropsFile = rootProject.file("local.properties")
+val localProps = Properties().apply {
+    if (localPropsFile.exists()) {
+        load(FileInputStream(localPropsFile))
+    }
+}
+val developerId = localProps.getProperty("developerId").orEmpty()
+val developerName = localProps.getProperty("developerName").orEmpty()
+val developerEmail = localProps.getProperty("developerEmail").orEmpty()
 
 android {
     namespace = "com.segment.analytics.kotlin.destinations.clevertap"
@@ -47,10 +70,8 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.0")
 
     api("com.clevertap.android:clevertap-android-sdk:7.5.1")
-}
 
-// Test Dependencies
-dependencies {
+    // Test Dependencies
     testImplementation("junit:junit:4.13.2")
     testImplementation("io.mockk:mockk:1.14.2")
 
@@ -61,36 +82,44 @@ dependencies {
     testImplementation("com.google.firebase:firebase-messaging:25.0.0")
 }
 
-// required for mvn-publish
-// too bad we can't move it into mvn-publish plugin because `android`is only accessible here
-tasks {
-    val sourceFiles = android.sourceSets.getByName("main").java.srcDirs
+// Task to rename the library output name
+tasks.withType<AbstractArchiveTask>().configureEach {
+    if (name.contains("Release", ignoreCase = true)) {
+        archiveFileName.set("$artifactId-$libraryVersion.aar")
+    } else if (name.contains("Debug", ignoreCase = true)) {
+        archiveFileName.set("$artifactId-debug-$libraryVersion.aar")
+    }
+}
 
-    register<Javadoc>("withJavadoc") {
-        isFailOnError = false
+mavenPublishing {
+    publishToMavenCentral()
+    signAllPublications()
+    coordinates(publishedGroupId, artifactId, libraryVersion)
 
-        setSource(sourceFiles)
+    pom {
+        name.set(artifactId)
+        description.set(libraryDescription)
+        url.set(siteUrl)
 
-        // add Android runtime classpath
-        android.bootClasspath.forEach { classpath += project.fileTree(it) }
-
-        // add classpath for all dependencies
-        android.libraryVariants.forEach { variant ->
-            variant.javaCompileProvider.get().classpath.files.forEach { file ->
-                classpath += project.fileTree(file)
+        licenses {
+            license {
+                name.set(licenseName)
+                url.set(licenseUrl)
             }
         }
-    }
 
-    register<Jar>("withJavadocJar") {
-        archiveClassifier.set("javadoc")
-        dependsOn(named("withJavadoc"))
-        val destination = named<Javadoc>("withJavadoc").get().destinationDir
-        from(destination)
-    }
+        developers {
+            developer {
+                id.set(developerId)
+                name.set(developerName)
+                email.set(developerEmail)
+            }
+        }
 
-    register<Jar>("withSourcesJar") {
-        archiveClassifier.set("sources")
-        from(sourceFiles)
+        scm {
+            connection.set("scm:git:$gitUrl")
+            developerConnection.set("scm:git:$gitUrl")
+            url.set(siteUrl)
+        }
     }
 }
