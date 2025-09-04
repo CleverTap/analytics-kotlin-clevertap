@@ -4,7 +4,7 @@ plugins {
 
     // Apply the java-library plugin for API and implementation separation.
     `java-library`
-    id("com.vanniktech.maven.publish") version "0.34.0"
+    id("com.vanniktech.maven.publish") version "0.34.0" apply false
 }
 
 buildscript {

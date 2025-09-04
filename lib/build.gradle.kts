@@ -1,5 +1,4 @@
 import java.util.Properties
-import java.io.FileInputStream
 
 plugins {
     id("com.android.library")
@@ -22,7 +21,7 @@ val licenseUrl = project.findProperty("licenseUrl") as String
 val localPropsFile = rootProject.file("local.properties")
 val localProps = Properties().apply {
     if (localPropsFile.exists()) {
-        load(FileInputStream(localPropsFile))
+        localPropsFile.inputStream().use { load(it) }
     }
 }
 val developerId = localProps.getProperty("developerId").orEmpty()
