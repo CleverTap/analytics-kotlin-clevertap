@@ -23,9 +23,9 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **Platform (please complete the following information):**
- - Library Version in use: [e.g. 0.0.5]
+ - Library Version in use: [e.g. 1.0.0]
  - Platform being tested: [e.g. Android]
- - Integrations in use: [e.g. Firebase, Amplitude]
+ - Integrations in use: [e.g. Clevertap]
 
 **Additional context**
 Add any other context about the problem here.
