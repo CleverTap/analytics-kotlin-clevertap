@@ -139,10 +139,16 @@ class CleverTapDestinationTest {
         val emptyIntegrations = JsonObject(mapOf<String, JsonObject>())
         val settings = Settings(emptyIntegrations)
 
+        val onInitFailed = mockk<(String) -> Unit>()
+        every { onInitFailed.invoke(any()) } just runs
+
+        val destination = CleverTapDestination(mockContext, null, onInitFailed)
+
         // When
         destination.update(settings, Plugin.UpdateType.Initial)
 
         // Then
+        verify { onInitFailed.invoke("CleverTap integration settings not found") }
         verify(exactly = 0) { CleverTapAPI.changeCredentials(any(), any(), any()) }
         verify(exactly = 0) { CleverTapAPI.getDefaultInstance(any()) }
     }
@@ -170,11 +176,17 @@ class CleverTapDestinationTest {
     fun `test update with empty account ID does not initialize CleverTap`() {
         // Given
         val settings = getMockSettings(accountId = "")
+        val onInitFailed = mockk<(String) -> Unit>()
+        every { onInitFailed.invoke(any()) } just runs
+
+        val destination = CleverTapDestination(mockContext, null, onInitFailed)
+        destination.analytics = mockAnalytics
 
         // When
         destination.update(settings, Plugin.UpdateType.Initial)
 
         // Then
+        verify { onInitFailed.invoke("Missing credentials: accountID=empty, accountToken=present")}
         verify(exactly = 0) { CleverTapAPI.changeCredentials(any(), any(), any()) }
         verify(exactly = 0) { CleverTapAPI.getDefaultInstance(any()) }
     }
@@ -183,11 +195,17 @@ class CleverTapDestinationTest {
     fun `test update with empty account token does not initialize CleverTap`() {
         // Given
         val settings = getMockSettings(accountToken = "")
+        val onInitFailed = mockk<(String) -> Unit>()
+        every { onInitFailed.invoke(any()) } just runs
+
+        val destination = CleverTapDestination(mockContext, null, onInitFailed)
+        destination.analytics = mockAnalytics
 
         // When
         destination.update(settings, Plugin.UpdateType.Initial)
 
         // Then
+        verify { onInitFailed.invoke("Missing credentials: accountID=present, accountToken=empty")}
         verify(exactly = 0) { CleverTapAPI.changeCredentials(any(), any(), any()) }
         verify(exactly = 0) { CleverTapAPI.getDefaultInstance(any()) }
     }
@@ -728,7 +746,7 @@ class CleverTapDestinationTest {
             true
         }
 
-        val uninitializedDestination = CleverTapDestination(mockContext, null, mockHandler)
+        val uninitializedDestination = CleverTapDestination(mockContext, null, null, mockHandler)
 
         uninitializedDestination.analytics = mockAnalytics
 
