@@ -27,8 +27,12 @@ class CleverTapSegmentApplication : Application() {
 
         // Initialize Segment Analytics with CleverTap destination
         analytics = Analytics(WRITE_KEY, applicationContext).apply {
-            this.add(plugin = CleverTapDestination(applicationContext, ::cleverTapIntegrationReady))
+            this.add(plugin = CleverTapDestination(applicationContext, ::cleverTapIntegrationReady, ::onInitFailed))
         }
+    }
+
+    private fun onInitFailed(reason: String) {
+        Log.i(TAG, "CleverTap init failed: $reason")
     }
 
     private fun cleverTapIntegrationReady(cleverTapInstance: CleverTapAPI) {
