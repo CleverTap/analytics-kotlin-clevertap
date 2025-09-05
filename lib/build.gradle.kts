@@ -42,6 +42,8 @@ android {
 
         buildConfigField("String", "VERSION_NAME", "\"${project.property("VERSION_NAME")}\"")
         buildConfigField("int", "VERSION_CODE", "${project.property("VERSION_CODE")}")
+
+        project.setProperty("archivesBaseName", "$artifactId-$libraryVersion")
     }
 
     buildTypes {
@@ -81,14 +83,6 @@ dependencies {
     testImplementation("com.google.firebase:firebase-messaging:25.0.0")
 }
 
-// Task to rename the library output name
-tasks.withType<AbstractArchiveTask>().configureEach {
-    if (name.contains("Release", ignoreCase = true)) {
-        archiveFileName.set("$artifactId-$libraryVersion.aar")
-    } else if (name.contains("Debug", ignoreCase = true)) {
-        archiveFileName.set("$artifactId-debug-$libraryVersion.aar")
-    }
-}
 
 mavenPublishing {
     publishToMavenCentral()
