@@ -44,13 +44,15 @@ data class CleverTapSettings(
 class CleverTapDestination internal constructor(
     private val context: Context,
     private val onInitCompleted: ((CleverTapAPI) -> Unit)? = null,
+    private val onInitFailed: ((String) -> Unit)? = null,
     private val mainHandler: Handler
 ) : DestinationPlugin(), AndroidLifecycle {
 
     constructor(
         context: Context,
-        onInitCompleted: ((CleverTapAPI) -> Unit)? = null
-    ) : this(context, onInitCompleted, Handler(Looper.getMainLooper()))
+        onInitCompleted: ((CleverTapAPI) -> Unit)? = null,
+        onInitFailed: ((String) -> Unit)? = null
+    ) : this(context, onInitCompleted, onInitFailed, Handler(Looper.getMainLooper()))
 
     override val key: String = "CleverTap"
 
@@ -70,6 +72,7 @@ class CleverTapDestination internal constructor(
         super.update(settings, type)
 
         if (!settings.hasIntegrationSettings(this)) {
+            onInitFailed?.invoke("CleverTap integration settings not found")
             return
         }
         analytics.log("CleverTap Destination is enabled")
@@ -78,6 +81,7 @@ class CleverTapDestination internal constructor(
         val settingsData = cleverTapSettings
         if (settingsData == null) {
             analytics.log("CleverTapSettings not available. Not loading CleverTap Destination.")
+            onInitFailed?.invoke("CleverTapSettings not available")
             return
         }
 
@@ -91,9 +95,11 @@ class CleverTapDestination internal constructor(
         val region = settingsData.region.replace(".", "")
 
         if (accountID.isEmpty() || accountToken.isEmpty()) {
+            val reason = "Missing credentials: accountID=${if (accountID.isEmpty()) "empty" else "present"}, accountToken=${if (accountToken.isEmpty()) "empty" else "present"}"
             analytics.log(
-                "CleverTap+Segment integration attempted initialization without account ID or account token."
+                "CleverTap+Segment integration attempted but $reason"
             )
+            onInitFailed?.invoke(reason)
             return
         }
 
