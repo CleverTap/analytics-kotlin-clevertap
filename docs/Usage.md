@@ -15,7 +15,7 @@ dependencies {
     implementation("com.segment.analytics.kotlin:android:1.21.0")
     
     // CleverTap Destination 
-    implementation("com.clevertap.android:clevertap-segment.kotlin:1.0.0") // todo change based on the published namespace
+    implementation("com.clevertap.android:clevertap-segment.kotlin:1.0.0")
 }
 ```
 

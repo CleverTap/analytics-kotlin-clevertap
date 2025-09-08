@@ -10,7 +10,7 @@ Add the following dependencies to your `build.gradle.kts` file:
 dependencies {
     implementation("com.clevertap.android:clevertap-android-sdk:7.5.1")
     implementation("com.segment.analytics.kotlin:android:1.21.0")
-    implementation("com.clevertap.android:clevertap-segment.kotlin:1.0.0") // todo change based on the published namespace
+    implementation("com.clevertap.android:clevertap-segment.kotlin:1.0.0")
 }
 ```
 
