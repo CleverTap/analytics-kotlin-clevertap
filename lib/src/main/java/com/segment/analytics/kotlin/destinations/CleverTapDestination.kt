@@ -158,11 +158,11 @@ class CleverTapDestination internal constructor(
             executeCleverTapOperation {
                 analytics.log("Executing onActivityCreated")
                 CleverTapAPI.setAppForeground(true)
-                cl?.pushNotificationClickedEvent(currentActivityRef?.get()?.intent?.extras)
 
-                val intent = act.intent
-                val data = intent?.data
-                cl?.pushDeepLink(data)
+                currentActivityRef?.get()?.intent?.let { intent ->
+                    cl?.pushNotificationClickedEvent(intent.extras)
+                    cl?.pushDeepLink(intent.data)
+                }
             }
         }
     }

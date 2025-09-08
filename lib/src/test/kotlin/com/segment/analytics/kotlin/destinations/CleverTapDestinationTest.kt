@@ -570,7 +570,7 @@ class CleverTapDestinationTest {
                         profile["Email"] == "test@example.com" &&
                         profile["Name"] == "John Doe" &&
                         profile["Phone"] == "+12-34567890" &&
-                        profile["Gender"] == "M"
+                        profile["Gender"] == "M" &&
                         profile["custom"] == "value"
             })
         }
