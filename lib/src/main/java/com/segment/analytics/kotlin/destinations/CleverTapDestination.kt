@@ -61,9 +61,6 @@ class CleverTapDestination internal constructor(
     @Volatile
     internal var cl: CleverTapAPI? = null
 
-    @Volatile
-    private var currentActivityRef: WeakReference<Activity>? = null
-
     // Thread-safe queue for operations before CleverTap is ready
     private val pendingOperations = ConcurrentLinkedQueue<() -> Unit>()
 
@@ -153,13 +150,13 @@ class CleverTapDestination internal constructor(
         super.onActivityCreated(activity, savedInstanceState)
 
         activity?.let { act ->
-            currentActivityRef = WeakReference(act)
+            val currentActivityRef = WeakReference(act)
 
             executeCleverTapOperation {
                 analytics.log("Executing onActivityCreated")
                 CleverTapAPI.setAppForeground(true)
 
-                currentActivityRef?.get()?.intent?.let { intent ->
+                currentActivityRef.get()?.intent?.let { intent ->
                     cl?.pushNotificationClickedEvent(intent.extras)
                     cl?.pushDeepLink(intent.data)
                 }
@@ -172,11 +169,11 @@ class CleverTapDestination internal constructor(
         super.onActivityResumed(activity)
 
         activity?.let { act ->
-            currentActivityRef = WeakReference(act)
+            val currentActivityRef = WeakReference(act)
 
             executeCleverTapOperation {
                 analytics.log("Executing onActivityResumed")
-                CleverTapAPI.onActivityResumed(currentActivityRef?.get())
+                CleverTapAPI.onActivityResumed(currentActivityRef.get())
             }
         }
     }
