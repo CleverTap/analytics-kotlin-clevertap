@@ -192,12 +192,12 @@ class CleverTapDestination internal constructor(
             return payload
         }
         try {
-            val profile = HashMap<String?, Any?>()
+            val profile = HashMap<String, Any>()
             profile.put("Identity", payload.userId)
             cl?.pushProfile(profile)
         } catch (t: Throwable) {
             analytics.log("CleverTap: Error pushing profile $t", LogKind.ERROR)
-            cl?.pushError(t.message, 512)
+            cl?.pushError(t.message, ERROR_CODE)
         }
         return payload
     }
