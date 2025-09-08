@@ -1,26 +1,49 @@
+import java.util.Properties
+
 plugins {
     id("com.android.library")
     kotlin("android")
-
     id("org.jetbrains.kotlin.plugin.serialization")
-    id("mvn-publish")
+    id("com.vanniktech.maven.publish")
 }
 
-val VERSION_NAME: String by project
+// gradle.properties
+val publishedGroupId = project.findProperty("clevertapPublishedGroupId") as String
+val artifactId = project.findProperty("clevertapArtifactId") as String
+val libraryVersion = project.findProperty("VERSION_NAME") as String
+val libraryDescription = project.findProperty("clevertapLibraryDescription") as String
+val siteUrl = project.findProperty("siteUrl") as String
+val gitUrl = project.findProperty("gitUrl") as String
+val licenseName = project.findProperty("licenseName") as String
+val licenseUrl = project.findProperty("licenseUrl") as String
+
+// local.properties
+val localPropsFile = rootProject.file("local.properties")
+val localProps = Properties().apply {
+    if (localPropsFile.exists()) {
+        localPropsFile.inputStream().use { load(it) }
+    }
+}
+val developerId = localProps.getProperty("developerId").orEmpty()
+val developerName = localProps.getProperty("developerName").orEmpty()
+val developerEmail = localProps.getProperty("developerEmail").orEmpty()
 
 android {
-    compileSdk = 31
-    buildToolsVersion = "31.0.0"
+    namespace = "com.segment.analytics.kotlin.destinations.clevertap"
+    compileSdk = 35
+    buildToolsVersion = "35.0.0"
 
     defaultConfig {
         multiDexEnabled = true
         minSdk = 21
-        targetSdk = 31
 
         testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("proguard-consumer-rules.pro")
 
-        buildConfigField("String", "VERSION_NAME", "\"$VERSION_NAME\"")
+        buildConfigField("String", "VERSION_NAME", "\"${project.property("VERSION_NAME")}\"")
+        buildConfigField("int", "VERSION_CODE", "${project.property("VERSION_CODE")}")
+
+        project.setProperty("archivesBaseName", "$artifactId-$libraryVersion")
     }
 
     buildTypes {
@@ -30,91 +53,66 @@ android {
         }
     }
     compileOptions {
-        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
+    buildFeatures {
+        buildConfig = true
+    }
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:1.1.5")
-
-    implementation("com.segment.analytics.kotlin:android:1.5.0")
+    implementation("com.segment.analytics.kotlin:android:1.21.0")
     implementation("androidx.multidex:multidex:2.0.1")
-    implementation("androidx.core:core-ktx:1.7.0")
+    implementation("androidx.core:core-ktx:1.13.0")
 
-    implementation("androidx.lifecycle:lifecycle-process:2.4.1")
-    implementation("androidx.lifecycle:lifecycle-common-java8:2.4.1")
-}
+    api("com.clevertap.android:clevertap-android-sdk:7.5.1")
 
-// Partner Dependencies
-dependencies {
-    // TODO add your partner deps here
-}
-
-// Test Dependencies
-dependencies {
+    // Test Dependencies
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.0")
-    testImplementation("io.mockk:mockk:1.12.4")
+    testImplementation("io.mockk:mockk:1.14.2")
 
-    // Add Roboelectric dependencies.
-    testImplementation("org.robolectric:robolectric:4.7.3")
-    testImplementation("androidx.test:core:1.4.0")
+    // Add Robolectric dependencies.
+    testImplementation("org.robolectric:robolectric:4.12.2")
+    testImplementation("androidx.test:core:1.7.0")
 
-    // Add JUnit4 legacy dependencies.
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.8.2")
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testImplementation(platform("org.junit:junit-bom:5.7.2"))
-
-    // For JSON Object testing
-    testImplementation("org.json:json:20200518")
-    testImplementation("org.skyscreamer:jsonassert:1.5.0")
+    testImplementation("com.google.firebase:firebase-messaging:25.0.0")
 }
 
-// Android Test Deps
-dependencies {
-    androidTestImplementation("androidx.test.ext:junit:1.1.3")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.4.0")
-}
 
-tasks.withType<Test> {
-    useJUnitPlatform()
-}
+mavenPublishing {
+    publishToMavenCentral()
+    signAllPublications()
+    coordinates(publishedGroupId, artifactId, libraryVersion)
 
-// required for mvn-publish
-// too bad we can't move it into mvn-publish plugin because `android`is only accessible here
-tasks {
-    val sourceFiles = android.sourceSets.getByName("main").java.srcDirs
+    pom {
+        name.set(artifactId)
+        description.set(libraryDescription)
+        url.set(siteUrl)
 
-    register<Javadoc>("withJavadoc") {
-        isFailOnError = false
-
-        setSource(sourceFiles)
-
-        // add Android runtime classpath
-        android.bootClasspath.forEach { classpath += project.fileTree(it) }
-
-        // add classpath for all dependencies
-        android.libraryVariants.forEach { variant ->
-            variant.javaCompileProvider.get().classpath.files.forEach { file ->
-                classpath += project.fileTree(file)
+        licenses {
+            license {
+                name.set(licenseName)
+                url.set(licenseUrl)
             }
         }
-    }
 
-    register<Jar>("withJavadocJar") {
-        archiveClassifier.set("javadoc")
-        dependsOn(named("withJavadoc"))
-        val destination = named<Javadoc>("withJavadoc").get().destinationDir
-        from(destination)
-    }
+        developers {
+            developer {
+                id.set(developerId)
+                name.set(developerName)
+                email.set(developerEmail)
+            }
+        }
 
-    register<Jar>("withSourcesJar") {
-        archiveClassifier.set("sources")
-        from(sourceFiles)
+        scm {
+            connection.set("scm:git:$gitUrl")
+            developerConnection.set("scm:git:$gitUrl")
+            url.set(siteUrl)
+        }
     }
 }

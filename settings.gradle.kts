@@ -1,4 +1,3 @@
-rootProject.name = "analytics-kotlin-destination-template"
+rootProject.name = "analytics-kotlin-clevertap"
 include(":lib")
-includeBuild("publishing-plugins")
 include(":testapp")
