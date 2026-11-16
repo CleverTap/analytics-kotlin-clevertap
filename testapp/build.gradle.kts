@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.clevertap.segment.kotlin.testapp"
-        minSdk = 21
+        minSdk = 23
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -43,7 +43,7 @@ android {
 
 dependencies {
     implementation(project(mapOf("path" to ":lib")))
-    implementation("com.clevertap.android:clevertap-android-sdk:7.5.1")
+    implementation("com.clevertap.android:clevertap-android-sdk:8.6.0")
     implementation("com.segment.analytics.kotlin:android:1.21.0")
     implementation("com.google.firebase:firebase-messaging:24.0.3")
     implementation("androidx.core:core-ktx:1.13.0")

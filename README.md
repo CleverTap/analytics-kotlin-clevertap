@@ -8,9 +8,9 @@ Add the following dependencies to your `build.gradle.kts` file:
 
 ```kotlin
 dependencies {
-    implementation("com.clevertap.android:clevertap-android-sdk:7.5.1")
+    implementation("com.clevertap.android:clevertap-android-sdk:8.6.0")
     implementation("com.segment.analytics.kotlin:android:1.21.0")
-    implementation("com.clevertap.android:clevertap-segment-kotlin:1.0.0")
+    implementation("com.clevertap.android:clevertap-segment-kotlin:2.0.0")
 }
 ```
 
@@ -31,7 +31,7 @@ analytics = Analytics(WRITE_KEY, applicationContext).apply {
 
 
 ## Requirements
-- Android API level 21+
+- Android API level 23+
 
 ## License
 
