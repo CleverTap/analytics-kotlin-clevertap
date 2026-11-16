@@ -35,7 +35,7 @@ android {
 
     defaultConfig {
         multiDexEnabled = true
-        minSdk = 21
+        minSdk = 23
 
         testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("proguard-consumer-rules.pro")
@@ -70,7 +70,7 @@ dependencies {
     implementation("androidx.multidex:multidex:2.0.1")
     implementation("androidx.core:core-ktx:1.13.0")
 
-    api("com.clevertap.android:clevertap-android-sdk:7.5.1")
+    api("com.clevertap.android:clevertap-android-sdk:8.6.0")
 
     // Test Dependencies
     testImplementation("junit:junit:4.13.2")

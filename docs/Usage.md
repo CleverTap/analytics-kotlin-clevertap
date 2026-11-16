@@ -9,13 +9,13 @@ Add the following dependencies to your `build.gradle.kts` file:
 ```kotlin
 dependencies {
     // CleverTap SDK
-    implementation("com.clevertap.android:clevertap-android-sdk:7.5.1")
+    implementation("com.clevertap.android:clevertap-android-sdk:8.6.0")
     
     // Segment Kotlin Analytics
     implementation("com.segment.analytics.kotlin:android:1.21.0")
     
     // CleverTap Destination 
-    implementation("com.clevertap.android:clevertap-segment-kotlin:1.0.0")
+    implementation("com.clevertap.android:clevertap-segment-kotlin:2.0.0")
 }
 ```
 
