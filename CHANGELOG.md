@@ -1,6 +1,6 @@
 # CHANGE LOG
 
-Version 2.0.0 (16 November, 2026)
+Version 2.0.0 (23 November, 2026)
 ===================================
 * Supports [analytics-kotlin v1.21.0](https://github.com/segmentio/analytics-kotlin) and [CleverTap Android SDK v8.6.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md#version-860-november-10-2026).
 * **Breaking:** Raises the minimum supported Android API level from 21 to 23, as required by CleverTap Android SDK v8.1.0 and above.
